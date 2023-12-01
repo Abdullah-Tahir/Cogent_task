@@ -1,6 +1,6 @@
 
 import os
-os.environ["OPENAI_API_KEY"] = "'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"
+os.environ["OPENAI_API_KEY"] = " "
 
 import tiktoken
 from langchain import OpenAI, PromptTemplate, LLMChain
