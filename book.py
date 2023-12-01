@@ -1,5 +1,6 @@
+
 import os
-os.environ["OPENAI_API_KEY"] = "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"
+os.environ["OPENAI_API_KEY"] = "'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"
 
 import tiktoken
 from langchain import OpenAI, PromptTemplate, LLMChain
@@ -24,64 +25,53 @@ from langchain.prompts import PromptTemplate
 
 llm = OpenAI(temperature=0)
 
+
 from langchain.document_loaders import (
     DirectoryLoader,
     PyPDFLoader,
     TextLoader,
     UnstructuredWordDocumentLoader,
 )
+pdf_loader = DirectoryLoader("C:/Users/abdul/Downloads/", glob="**/*.pdf", loader_cls=PyPDFLoader)
+#text_loader = DirectoryLoader("C:/Users/abdul/Downloads/dyaya/", glob="**/*.txt", loader_cls=TextLoader)
+#word_loader = DirectoryLoader("C:/Users/abdul/Downloads/dyaya/", glob="./*.docx", loader_cls=UnstructuredWordDocumentLoader).load()
+
+
+
+# Split the text into chunks
+text_splitter = RecursiveCharacterTextSplitter(
+
+    chunk_size=2000,
+    chunk_overlap=0,
+    length_function=len)
+docs = text_splitter.split_documents(pdf_loader)
+
 
 from langchain.chains.summarize import load_summarize_chain
+import textwrap
+chain = load_summarize_chain(llm, 
+                             chain_type="map_reduce")
 
-BULLET_POINT_PROMPT = PromptTemplate(template="• {text}")
 
-def summarize_book(documents, map_prompt=BULLET_POINT_PROMPT, combine_prompt=BULLET_POINT_PROMPT, return_intermediate_steps=False, input_variables=None):
-    # Load the list of documents from the directory
-    pdf_loader = DirectoryLoader("C:/Users/abdul/Downloads/book", glob="**/*.pdf", loader_cls=PyPDFLoader)
-    documents = pdf_loader.load()
+output_summary = chain.run(docs)
+wrapped_text = textwrap.fill(output_summary, width=100)
+print(wrapped_text)
 
-    # Split the text into chunks
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=0, length_function=len)
-    docs = text_splitter.split_documents(documents)
 
-    # Create and run the summarization chain
-    chain = load_summarize_chain(llm,
-                                 chain_type="map_reduce",
-                                 map_prompt=map_prompt,
-                                 combine_prompt=combine_prompt,
-                                 return_intermediate_steps=return_intermediate_steps)
+# for summarizing each part
+chain.llm_chain.prompt.template
 
-    # Pass input variables if provided
-    if input_variables:
-        output_summary = chain(docs, input_variables=input_variables)
-    else:
-        output_summary = chain(docs)
+# for combining the parts
+chain.combine_document_chain.llm_chain.prompt.template
+chain = load_summarize_chain(llm, 
+                             chain_type="map_reduce",
+                             verbose=True
+                             )
 
-    # Process the output
-    if return_intermediate_steps:
-        # Access and analyze individual summaries for each document
-        intermediate_summaries = output_summary["intermediate_summaries"]
-        # ...
 
-        # Combine the individual summaries into a final text
-        final_summary = output_summary["output_text"]
-    else:
-        final_summary = output_summary
-
-    # Wrap the text for better readability
-    wrapped_text = textwrap.fill(final_summary,
-                                 width=100,
-                                 break_long_words=False,
-                                 replace_whitespace=False)
-
-    # Print the final summary
-    print(wrapped_text)
-
-# Usage example with default prompt
-summarize_book(documents)
-
-# Usage example with custom prompt and input variables
-custom_prompt_template = PromptTemplate(template="Summarize the following text {text} into a concise narrative, focusing on key plot points, character motivations, and historical context:")
-CUSTOM_PROMPT = PromptTemplate(template=custom_prompt_template, input_variables=["text"])
-input_variables = {"text": "The text to be summarized"}
-summarize_book(documents, map_prompt=CUSTOM_PROMPT, combine_prompt=CUSTOM_PROMPT, input_variables=input_variables)
+output_summary = chain.run(docs)
+wrapped_text = textwrap.fill(output_summary, 
+                             width=100,
+                             break_long_words=False,
+                             replace_whitespace=False)
+print(wrapped_text)
